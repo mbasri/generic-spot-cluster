@@ -1,0 +1,10 @@
+# Terraform
+terraform.tfstate*
+.terraform*
+*-plan
+
+# Archive
+
+
+# Secret
+*.pem
