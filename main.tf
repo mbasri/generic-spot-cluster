@@ -89,11 +89,11 @@ resource "aws_spot_fleet_request" "main" {
   target_group_arns = [aws_lb_target_group.main.arn]
 
   launch_specification {
-    instance_type     = "m1.small"
+    instance_type     = "t2.medium"
     ami               = "ami-0ebb3a801d5fb8b9b"
     key_name          = aws_key_pair.main.key_name
-    availability_zone = "eu-west-3a"
-    subnet_id         =  element(data.terraform_remote_state.main.outputs.public_subnet_id.*, 1)
+    #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
+    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.public_subnet_id.*)
     tags              = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
   }
 

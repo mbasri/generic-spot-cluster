@@ -32,5 +32,5 @@ data "aws_iam_policy" "xray" {
 }
 
 data "aws_iam_role" "spot_fleet" {
-  name = "AWSServiceRoleForEC2SpotFleet"
+  name = "aws-ec2-spot-fleet-tagging-role"
 }
