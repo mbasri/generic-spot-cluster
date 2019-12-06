@@ -17,3 +17,7 @@ output "cluster_ssh_private_key" {
     value       = tls_private_key.main.private_key_pem
     description = "SSH key to use for the cluster"
 }
+
+output "ec2_image_name" {
+  value = data.aws_ami.main.name
+}

@@ -67,7 +67,7 @@ resource "aws_key_pair" "main" {
   public_key = tls_private_key.main.public_key_openssh
 }
 
-/*
+
 resource "aws_secretsmanager_secret" "main" {
   name                    = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])
   recovery_window_in_days = 0
@@ -79,22 +79,44 @@ resource "aws_secretsmanager_secret_version" "db" {
   secret_id     = aws_secretsmanager_secret.main.id
   secret_string = jsonencode(merge(map("keypair", tls_private_key.main.private_key_pem)))
 }
-*/
 
 resource "aws_spot_fleet_request" "main" {
   iam_fleet_role    = data.aws_iam_role.spot_fleet.arn
   target_capacity   = 2
-  valid_until       = "2020-11-04T20:44:20Z" #timeadd(timestamp(), "10m")
+  valid_until       = timeadd(timestamp(), "140m")
   load_balancers    = [aws_lb.main.arn]
   target_group_arns = [aws_lb_target_group.main.arn]
 
   launch_specification {
-    instance_type     = "t2.medium"
-    ami               = "ami-0ebb3a801d5fb8b9b"
-    key_name          = aws_key_pair.main.key_name
+    instance_type          = "t2.small"
+    ami                    = data.aws_ami.main.image_id
+    key_name               = aws_key_pair.main.key_name
+    vpc_security_group_ids = [ 
+      data.terraform_remote_state.bastion.outputs.ssh_sg_id,
+      data.terraform_remote_state.main.outputs.sg_access_to_internet
+    ]
     #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
-    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.public_subnet_id.*)
+    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
     tags              = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
   }
 
+  launch_specification {
+    instance_type          = "t2.medium"
+    ami                    = data.aws_ami.main.image_id
+    key_name               = aws_key_pair.main.key_name
+    vpc_security_group_ids = [ 
+      data.terraform_remote_state.bastion.outputs.ssh_sg_id,
+      data.terraform_remote_state.main.outputs.sg_access_to_internet
+    ]
+    #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
+    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
+    tags              = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
+  }
+
+  lifecycle {
+    ignore_changes = [
+      valid_until,
+      #launch_specification
+    ]
+  }
 }
