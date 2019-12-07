@@ -21,3 +21,7 @@ output "cluster_ssh_private_key" {
 output "ec2_image_name" {
   value = data.aws_ami.main.name
 }
+
+output "test" {
+  value = data.aws_ami.main.image_id
+}

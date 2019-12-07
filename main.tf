@@ -87,30 +87,26 @@ resource "aws_spot_fleet_request" "main" {
   load_balancers    = [aws_lb.main.arn]
   target_group_arns = [aws_lb_target_group.main.arn]
 
-  launch_specification {
-    instance_type          = "t2.small"
-    ami                    = data.aws_ami.main.image_id
-    key_name               = aws_key_pair.main.key_name
-    vpc_security_group_ids = [ 
-      data.terraform_remote_state.bastion.outputs.ssh_sg_id,
-      data.terraform_remote_state.main.outputs.sg_access_to_internet
-    ]
-    #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
-    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
-    tags              = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
-  }
 
-  launch_specification {
-    instance_type          = "t2.medium"
-    ami                    = data.aws_ami.main.image_id
-    key_name               = aws_key_pair.main.key_name
-    vpc_security_group_ids = [ 
-      data.terraform_remote_state.bastion.outputs.ssh_sg_id,
-      data.terraform_remote_state.main.outputs.sg_access_to_internet
-    ]
-    #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
-    subnet_id         = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
-    tags              = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
+
+
+  dynamic "launch_specification" {
+    for_each  = ["t2.small", "t2.medium"]
+
+    content {
+      instance_type            = launch_specification.value
+      ami                      = data.aws_ami.main.image_id
+      user_data                = data.template_cloudinit_config.main.rendered
+      key_name                 = aws_key_pair.main.key_name
+      vpc_security_group_ids   = [ 
+        data.terraform_remote_state.bastion.outputs.ssh_sg_id,
+        data.terraform_remote_state.main.outputs.sg_access_to_internet
+      ]
+      #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
+      subnet_id                = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
+      iam_instance_profile_arn = aws_iam_instance_profile.main.arn
+      tags                     = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "spt"])))
+    }
   }
 
   lifecycle {
@@ -119,4 +115,27 @@ resource "aws_spot_fleet_request" "main" {
       #launch_specification
     ]
   }
+}
+
+resource "aws_lambda_function" "tagger_lambda" {
+  filename                       = "${path.module}/files/tagger.zip"
+  description                    = "[Terraform] Lambda used to set the host index for the ECS SPOT cluster"
+  function_name                  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "all", "tag", "lam"])
+  role                           = aws_iam_role.tagger_execution_role.arn
+  handler                        = "tagger.handler"
+  source_code_hash               = data.archive_file.tagger.output_base64sha256
+  runtime                        = "python3.7"
+  reserved_concurrent_executions = 1
+  kms_key_arn                    = data.aws_kms_alias.lambda.target_key_arn
+  tracing_config {
+    mode = "Active"
+  }
+
+  environment {
+    variables = {
+      spot_fleet_request_id = aws_spot_fleet_request.main.id
+    }
+  }
+
+  tags = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "all", "tag", "lam"])))
 }
