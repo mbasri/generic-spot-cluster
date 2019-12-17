@@ -75,46 +75,127 @@ resource "aws_secretsmanager_secret" "main" {
   tags                    = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri"])))
 }
 
-resource "aws_secretsmanager_secret_version" "db" {
+resource "aws_secretsmanager_secret_version" "main" {
   secret_id     = aws_secretsmanager_secret.main.id
   secret_string = jsonencode(merge(map("keypair", tls_private_key.main.private_key_pem)))
 }
 
-resource "aws_spot_fleet_request" "main" {
-  iam_fleet_role    = data.aws_iam_role.spot_fleet.arn
-  target_capacity   = 2
-  valid_until       = timeadd(timestamp(), "140m")
-  load_balancers    = [aws_lb.main.arn]
-  target_group_arns = [aws_lb_target_group.main.arn]
 
-
-
-
-  dynamic "launch_specification" {
-    for_each  = ["t2.small", "t2.medium"]
-
-    content {
-      instance_type            = launch_specification.value
-      ami                      = data.aws_ami.main.image_id
-      user_data                = data.template_cloudinit_config.main.rendered
-      key_name                 = aws_key_pair.main.key_name
-      vpc_security_group_ids   = [ 
-        data.terraform_remote_state.bastion.outputs.ssh_sg_id,
-        data.terraform_remote_state.main.outputs.sg_access_to_internet
-      ]
-      #availability_zone = join(", ", data.terraform_remote_state.main.outputs.availability_zones.*)
-      subnet_id                = join(", ", data.terraform_remote_state.main.outputs.private_subnet_id.*)
-      iam_instance_profile_arn = aws_iam_instance_profile.main.arn
-      tags                     = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "spt"])))
+resource "aws_launch_template" "main" {
+  name                   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "spt"])
+  description            = "[Terraform] Launch template for '${var.tags["Billing:Application"]}' Application"
+  iam_instance_profile   {
+    name = aws_iam_instance_profile.main.name
+  }
+  image_id               = data.aws_ami.main.image_id
+  key_name               = aws_key_pair.main.key_name
+  vpc_security_group_ids = [ 
+    data.terraform_remote_state.bastion.outputs.ssh_sg_id,
+    data.terraform_remote_state.main.outputs.sg_access_to_internet
+  ]
+  instance_type            = "t2.small"
+  user_data                = data.template_cloudinit_config.main.rendered
+  
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = 50
+      encrypted   = true
     }
   }
 
   lifecycle {
-    ignore_changes = [
-      valid_until,
-      #launch_specification
-    ]
+    create_before_destroy = true
   }
+}
+
+resource "aws_autoscaling_group" "main" {
+  name                        = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "asg"])
+  availability_zones          = data.terraform_remote_state.main.outputs.availability_zones
+  min_size                    = length(data.terraform_remote_state.main.outputs.availability_zones)
+  desired_capacity            = length(data.terraform_remote_state.main.outputs.availability_zones)
+  max_size                    = length(data.terraform_remote_state.main.outputs.availability_zones)
+  vpc_zone_identifier         = data.terraform_remote_state.main.outputs.private_subnet_id.*
+  target_group_arns           = [ aws_lb_target_group.main.arn ]
+  enabled_metrics             = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
+  
+  mixed_instances_policy {
+    instances_distribution {
+      on_demand_percentage_above_base_capacity = 0
+      spot_allocation_strategy = "capacity-optimized"
+      
+    }
+    launch_template {
+      launch_template_specification {
+        launch_template_id = aws_launch_template.main.id
+        version = "$Latest"
+      }
+
+      dynamic "override" {
+        for_each  = ["t2.small", "t2.medium"]
+        content {
+          instance_type  = override.value
+        }
+      }
+    }
+
+  }
+
+  tag {
+    key                 = "Name"
+    value               = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "ec2", "0"])
+    propagate_at_launch = true
+  }
+
+  dynamic "tag" {
+    for_each  = var.tags
+
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_schedule" "week_scale_up" {
+  scheduled_action_name  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "sch", "wku"])
+  min_size               = length(data.terraform_remote_state.main.outputs.availability_zones)
+  max_size               = length(data.terraform_remote_state.main.outputs.availability_zones)
+  desired_capacity       = length(data.terraform_remote_state.main.outputs.availability_zones)
+  recurrence             = var.schedule_scale_up_and_down["week_scale_up"]
+  autoscaling_group_name = aws_autoscaling_group.main.name
+}
+
+resource "aws_autoscaling_schedule" "week_scale_down" {
+  scheduled_action_name  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "sch", "wkd"])
+  min_size               = "0"
+  max_size               = "0"
+  desired_capacity       = "0"
+  recurrence             = var.schedule_scale_up_and_down["week_scale_down"]
+  autoscaling_group_name = aws_autoscaling_group.main.name
+}
+
+resource "aws_autoscaling_schedule" "weekend_scale_up" {
+  scheduled_action_name  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "sch", "weu"])
+  min_size               = length(data.terraform_remote_state.main.outputs.availability_zones)
+  max_size               = length(data.terraform_remote_state.main.outputs.availability_zones)
+  desired_capacity       = length(data.terraform_remote_state.main.outputs.availability_zones)
+  recurrence             = var.schedule_scale_up_and_down["weekend_scale_up"]
+  autoscaling_group_name = aws_autoscaling_group.main.name
+}
+
+resource "aws_autoscaling_schedule" "weekend_scale_down" {
+  scheduled_action_name  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "sch", "wed"])
+  min_size               = "0"
+  max_size               = "0"
+  desired_capacity       = "0"
+  recurrence             = var.schedule_scale_up_and_down["weekend_scale_down"]
+  autoscaling_group_name = aws_autoscaling_group.main.name
 }
 
 resource "aws_lambda_function" "tagger_lambda" {
@@ -133,7 +214,7 @@ resource "aws_lambda_function" "tagger_lambda" {
 
   environment {
     variables = {
-      spot_fleet_request_id = aws_spot_fleet_request.main.id
+      cluster_name = aws_autoscaling_group.main.name
     }
   }
 

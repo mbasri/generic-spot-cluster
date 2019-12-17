@@ -1,3 +1,14 @@
+variable "schedule_scale_up_and_down" {
+  type        = map
+  description = "Schedule action cron time scale up/down on the bastion"
+  default = {
+    week_scale_up      = "30 17 * * 1-5"
+    week_scale_down    = "0 21 * * 1-5"
+    weekend_scale_up   = "0 8 * * 0,6"
+    weekend_scale_down = "0 22 * * 0,6"
+  }
+}
+
 variable "tags" {
   type        = map
   description = "Default tags to be applied on 'Xiaomi Mi Home Security Camera 360 Backup' infrastructure"

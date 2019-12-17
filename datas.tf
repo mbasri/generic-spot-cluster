@@ -75,7 +75,7 @@ data "template_file" "tagger" {
 
 data "template_cloudinit_config" "main" {
   gzip          = false
-  base64_encode = false
+  base64_encode = true
 
   part {
     content_type = "text/x-shellscript"
@@ -135,6 +135,10 @@ data "template_file" "cwl_policy" {
 
 data "template_file" "ec2_policy" {
   template = file("files/iam/ec2-policy.json.tpl")
+}
+
+data "template_file" "asg_policy" {
+  template = file("files/iam/asg-policy.json.tpl")
 }
 
 data "template_file" "lambda_policy" {
