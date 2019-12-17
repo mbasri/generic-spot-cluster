@@ -1,6 +1,6 @@
 variable "schedule_scale_up_and_down" {
   type        = map
-  description = "Schedule action cron time scale up/down on the bastion"
+  description = "Schedule action cron time scale up/down"
   default = {
     week_scale_up      = "30 17 * * 1-5"
     week_scale_down    = "0 21 * * 1-5"
