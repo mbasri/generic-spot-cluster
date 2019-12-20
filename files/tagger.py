@@ -3,9 +3,6 @@ import sys
 import logging
 import boto3
 
-# Initialize Boto3 aws client
-ec2 = boto3.client('ec2')
-
 def handler(event, context):
   logger = setup_logging(context.aws_request_id)
   logger.setLevel(logging.INFO)
@@ -16,45 +13,28 @@ def handler(event, context):
   logger.info(event)
   
   count = '1'
-  SPOT_FLEET_REQUEST_ID = os.environ['spot_fleet_request_id']
+  CLUSTER_NAME = os.environ['cluster_name']
 
-  ec2_response = ec2.describe_instances(
-    Filters=[
-    {
-      'Name': 'instance-state-name',
-      'Values': [
-        'pending',
-        'running',
-        'stopping',
-        'stopped',
-        ]
-      },
-      {
-        'Name': 'tag-key',
-        'Values': [
-          'Count',
-        ]
-      },
-      {
-        'Name': 'tag:aws:ec2spot:fleet-request-id',
-        'Values': [
-          SPOT_FLEET_REQUEST_ID
-        ]
-      }
-    ],
+  asg = boto3.client('autoscaling')
+  ec2 = boto3.client('ec2')
+
+  asg_response = asg.describe_auto_scaling_groups(
+    AutoScalingGroupNames=[
+      CLUSTER_NAME
+    ]
   )
-  logger.info(ec2_response)
   
   instances = []
   
   try:
-    for i in ec2_response['Reservations'][0]['Instances']:
-      instances.append(i['InstanceId'])
+    for i in asg_response['AutoScalingGroups'][0]['Instances']:
+      if i['LifecycleState'] == 'InService' or i['LifecycleState'] == 'Pending': 
+        instances.append(i['InstanceId'])
   except IndexError :
-    logger.error('IndexError on spot fleet')
+    logger.error('IndexError on autoscaling')
     count = '1'
     
-  logger.info('## INSTANCE(S) FOUND ON SPOT FLEET')
+  logger.info('## INSTANCE(S) FOUND ON THE ASG')
   logger.info('instances=['+','.join(instances)+']')
   
   ec2_response = ec2.describe_instances(
@@ -77,7 +57,7 @@ def handler(event, context):
     ],
     InstanceIds = instances
   )
-  logger.info('## ACTIVE INSTANCE(S) FOUND ON SPOT FLEET')
+  logger.info('## ACTIVE INSTANCE(S) FOUND ON THE ASG')
   logger.info('ec2_response='+str(ec2_response))
   
   counts = []
@@ -91,7 +71,7 @@ def handler(event, context):
     logger.error('IndexError on ec2')
     count = '1'
     
-  counts.sort()
+  #counts.sort()
   for i in counts :
     if count in counts:
       count = str(int(count)+1)
@@ -111,7 +91,7 @@ def handler(event, context):
   )
 
   response = {
-    'spot_fleet_request_id': SPOT_FLEET_REQUEST_ID,
+    'cluster_name': CLUSTER_NAME,
     'count': count,
     'instance_id': event['instance_id']
   }

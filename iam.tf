@@ -73,6 +73,12 @@ resource "aws_iam_role_policy" "ec2" {
   policy = data.template_file.ec2_policy.rendered
 }
 
+resource "aws_iam_role_policy" "asg" {
+  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "asg"])
+  role   = aws_iam_role.tagger_execution_role.id
+  policy = data.template_file.asg_policy.rendered
+}
+
 resource "aws_iam_role_policy" "lambda_logs" {
   name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "log"])
   role   = aws_iam_role.tagger_execution_role.id
