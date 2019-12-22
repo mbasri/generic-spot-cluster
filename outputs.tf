@@ -1,11 +1,21 @@
-output "cluster_name" {
+output "ecs_cluster_name" {
   value       = aws_ecs_cluster.main.name
   description = "Cluster name"
+}
+
+output "alb_name" {
+  value       = aws_lb.main.name
+  description = "Name of the load balencer"
 }
 
 output "alb_url" {
   value       = aws_lb.main.dns_name
   description = "URL of the load balencer"
+}
+
+output "subnets" {
+  value       = aws_autoscaling_group.main.vpc_zone_identifier
+  description = "Subnets of the cluster"
 }
 
 output "alb_accesslog" {

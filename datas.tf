@@ -56,8 +56,8 @@ data "template_file" "tagger" {
   template = file("${path.module}/files/user-data/03-tagger.sh.tpl")
   vars = {
     region                    = data.terraform_remote_state.main.outputs.region
-    hostname                  = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "spt"])
-    tagger_lambda_name        = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "all", "tag", "lam"])
+    hostname                  = join("-", [local.prefix_name, "pri", "spt"])
+    tagger_lambda_name        = join("-", [local.prefix_name, "all", "tag", "lam"])
 
     billing_organisation      = var.tags["Billing:Organisation"]
     billing_organisation_unit = var.tags["Billing:OrganisationUnit"]
@@ -96,8 +96,8 @@ data "template_cloudinit_config" "main" {
 # Lambda for tagging EBS & ENI
 data "archive_file" "tagger" {
   type        = "zip"
-  source_file = "${path.module}/files/tagger.py"
-  output_path = "${path.module}/files/tagger.zip"
+  source_file = "${path.module}/files/lambda/tagger.py"
+  output_path = "${path.module}/files/lambda/tagger.zip"
 }
 
 # IAM Policies

@@ -1,13 +1,13 @@
 #SPOT intances
 resource "aws_iam_role" "main" {
-  name               = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "iam", "rol"])
+  name               = join("-", [local.prefix_name, "pri", "iam", "rol"])
   description        = "[Terraform] IAM roles for EC2 Bastion"
   assume_role_policy = file("files/iam/ec2-role.json")
-  tags               = merge (var.tags, map ("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "rol"])))
+  tags               = merge (var.tags, map ("Name", join("-", [local.prefix_name, "pri", "rol"])))
 }
 
 resource "aws_iam_instance_profile" "main" {
-  name = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pro"])
+  name = join("-", [local.prefix_name, "pri", "pro"])
   role = aws_iam_role.main.name
 }
 
@@ -17,19 +17,19 @@ resource "aws_iam_role_policy_attachment" "archivelog" {
 }
 
 resource "aws_iam_role_policy" "lambda" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "lam"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "lam"])
   role   = aws_iam_role.main.id
   policy = data.template_file.lambda_policy.rendered
 }
 
 resource "aws_iam_role_policy" "tags" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "tag"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "tag"])
   role   = aws_iam_role.main.id
   policy = data.template_file.tags_policy.rendered
 }
 
 resource "aws_iam_role_policy" "cwl" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "cwl"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "cwl"])
   role   = aws_iam_role.main.id
   policy = data.template_file.cwl_policy.rendered
 }
@@ -56,10 +56,10 @@ resource "aws_iam_role_policy_attachment" "ecs" {
 
 # Lambda tagger
 resource "aws_iam_role" "tagger_execution_role" {
-  name               = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "rol", "tag", "lam"])
+  name               = join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])
   description        = "[Terraform] IAM roles for lambda used by the Bastion"
   assume_role_policy = file("files/iam/lambda-role.json")
-  tags               = merge(var.tags, map("Name", join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "rol", "tag", "lam"])))
+  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])))
 }
 
 resource "aws_iam_role_policy_attachment" "xray" {
@@ -68,19 +68,19 @@ resource "aws_iam_role_policy_attachment" "xray" {
 }
 
 resource "aws_iam_role_policy" "ec2" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "ec2"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "ec2"])
   role   = aws_iam_role.tagger_execution_role.id
   policy = data.template_file.ec2_policy.rendered
 }
 
 resource "aws_iam_role_policy" "asg" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "asg"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "asg"])
   role   = aws_iam_role.tagger_execution_role.id
   policy = data.template_file.asg_policy.rendered
 }
 
 resource "aws_iam_role_policy" "lambda_logs" {
-  name   = join("-",[var.name["Organisation"], var.name["OrganisationUnit"], var.name["Application"], var.name["Environment"], "pri", "pol", "log"])
+  name   = join("-", [local.prefix_name, "pri", "pol", "log"])
   role   = aws_iam_role.tagger_execution_role.id
   policy = data.template_file.cwl_policy.rendered
 }
