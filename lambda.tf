@@ -1,5 +1,5 @@
 resource "aws_lambda_function" "tagger_lambda" {
-  filename                       = "${path.module}/files/tagger.zip"
+  filename                       = "${path.module}/files/lambda/tagger.zip"
   description                    = "[Terraform] Lambda used to set the host index for the ECS SPOT cluster"
   function_name                  = join("-", [local.prefix_name, "all", "tag", "lam"])
   role                           = aws_iam_role.tagger_execution_role.arn
