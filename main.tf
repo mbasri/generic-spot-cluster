@@ -102,6 +102,10 @@ resource "aws_launch_template" "main" {
   ]
   instance_type            = "t2.small"
   user_data                = data.template_cloudinit_config.main.rendered
+
+  monitoring {
+    enabled = true
+  }
   
   block_device_mappings {
     device_name = "/dev/xvda"
