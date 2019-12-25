@@ -130,6 +130,8 @@ resource "aws_autoscaling_group" "main" {
   //target_group_arns           = [ aws_lb_target_group.main.arn ]
   enabled_metrics             = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
   metrics_granularity         = "1Minute"
+  health_check_grace_period   = "120"
+  default_cooldown            = "300"
   
   mixed_instances_policy {
     instances_distribution {
@@ -137,6 +139,7 @@ resource "aws_autoscaling_group" "main" {
       spot_allocation_strategy = "capacity-optimized"
       
     }
+
     launch_template {
       launch_template_specification {
         launch_template_id = aws_launch_template.main.id
