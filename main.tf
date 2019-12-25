@@ -123,12 +123,13 @@ resource "aws_launch_template" "main" {
 resource "aws_autoscaling_group" "main" {
   name                        = join("-", [local.prefix_name, "pri", "asg"])
   availability_zones          = data.terraform_remote_state.main.outputs.availability_zones
-  min_size                    = length(data.terraform_remote_state.main.outputs.availability_zones)
+  min_size                    = "1"// length(data.terraform_remote_state.main.outputs.availability_zones)
   desired_capacity            = length(data.terraform_remote_state.main.outputs.availability_zones)
-  max_size                    = length(data.terraform_remote_state.main.outputs.availability_zones)
+  max_size                    = "5"// length(data.terraform_remote_state.main.outputs.availability_zones)
   vpc_zone_identifier         = data.terraform_remote_state.main.outputs.private_subnet_id.*
   //target_group_arns           = [ aws_lb_target_group.main.arn ]
   enabled_metrics             = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
+  metrics_granularity         = "1Minute"
   
   mixed_instances_policy {
     instances_distribution {
@@ -149,7 +150,6 @@ resource "aws_autoscaling_group" "main" {
         }
       }
     }
-
   }
 
   tag {
@@ -170,6 +170,7 @@ resource "aws_autoscaling_group" "main" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes = [desired_capacity]
   }
 }
 

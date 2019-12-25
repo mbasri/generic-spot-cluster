@@ -1,7 +1,7 @@
 #SPOT intances
 resource "aws_iam_role" "main" {
   name               = join("-", [local.prefix_name, "pri", "iam", "rol"])
-  description        = "[Terraform] IAM roles for EC2 Bastion"
+  description        = "[Terraform] IAM roles for EC2"
   assume_role_policy = file("files/iam/ec2-role.json")
   tags               = merge (var.tags, map ("Name", join("-", [local.prefix_name, "pri", "rol"])))
 }
@@ -57,7 +57,7 @@ resource "aws_iam_role_policy_attachment" "ecs" {
 # Lambda tagger
 resource "aws_iam_role" "tagger_execution_role" {
   name               = join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])
-  description        = "[Terraform] IAM roles for lambda used by the Bastion"
+  description        = "[Terraform] IAM roles for lambda used for generate an instance count"
   assume_role_policy = file("files/iam/lambda-role.json")
   tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])))
 }
@@ -83,4 +83,51 @@ resource "aws_iam_role_policy" "lambda_logs" {
   name   = join("-", [local.prefix_name, "pri", "pol", "log"])
   role   = aws_iam_role.tagger_execution_role.id
   policy = data.template_file.cwl_policy.rendered
+}
+
+# ASG Lifecycle hook
+resource "aws_iam_role" "lifecycle_hook" {
+  name               = join("-", [local.prefix_name, "pri", "rol", "hok"])
+  description        = "[Terraform] IAM roles for ASG Lifecycle hook"
+  assume_role_policy = file("files/iam/asg-role.json")
+  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "hok"])))
+}
+
+resource "aws_iam_role_policy" "sns" {
+  name   = join("-", [local.prefix_name, "pri", "pol", "sns"])
+  role   = aws_iam_role.lifecycle_hook.id
+  policy = data.template_file.sns_policy.rendered
+}
+
+# Lambda Lifecycle hook
+resource "aws_iam_role" "lifecycle_hook_lambda" {
+  name               = join("-", [local.prefix_name, "pri", "rol", "hok", "lam"])
+  description        = "[Terraform] IAM roles for lambda used for draining the EC2"
+  assume_role_policy = file("files/iam/lifecycle-hook-lambda-role.json")
+  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "hok", "lam"])))
+}
+
+resource "aws_iam_role_policy" "lifecycle_hook_lambda" {
+  name   = join("-", [local.prefix_name, "pri", "pol", "hok", "lam"])
+  role   = aws_iam_role.lifecycle_hook_lambda.id
+  policy = data.template_file.lifecycle_hook_lambda.rendered
+}
+
+resource "aws_iam_role_policy_attachment" "lifecycle_hook_lambda_xray" {
+  role       = aws_iam_role.lifecycle_hook_lambda.name
+  policy_arn = data.aws_iam_policy.xray.arn
+}
+
+resource "aws_iam_role_policy" "lifecycle_hook_lambda_sns" {
+  name   = join("-", [local.prefix_name, "pri", "pol", "sns"])
+  role   = aws_iam_role.lifecycle_hook_lambda.id
+  policy = data.template_file.sns_policy.rendered
+}
+
+resource "aws_lambda_permission" "with_sns" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lifecycle_hook.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.main.arn
 }

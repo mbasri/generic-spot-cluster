@@ -100,6 +100,14 @@ data "archive_file" "tagger" {
   output_path = "${path.module}/files/lambda/tagger.zip"
 }
 
+# Lambda for ASG Lifecycle hook
+data "archive_file" "lifecycle_hook" {
+  type        = "zip"
+  source_file = "${path.module}/files/lambda/lifecycle-hook.py"
+  output_path = "${path.module}/files/lambda/lifecycle-hook.zip"
+}
+
+
 # IAM Policies
 data "aws_iam_policy" "cloud_watch_agent" {
   arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"  
@@ -144,8 +152,16 @@ data "template_file" "asg_policy" {
 data "template_file" "lambda_policy" {
   template = file("files/iam/lambda-policy.json.tpl")
   vars     = {
-            tagger_lambda_arn = aws_lambda_function.tagger_lambda.arn
+            tagger_lambda_arn = aws_lambda_function.tagger.arn
           }
+}
+
+data "template_file" "sns_policy" {
+  template = file("files/iam/sns-policy.json.tpl")
+}
+
+data "template_file" "lifecycle_hook_lambda" {
+  template = file("files/iam/lifecycle-hook-lambda-policy.json.tpl")
 }
 
 # KMS keys
@@ -163,4 +179,8 @@ data "aws_kms_alias" "sqs" {
 
 data "aws_kms_alias" "dynamodb" {
   name = "alias/aws/dynamodb"
+}
+
+data "aws_kms_alias" "sns" {
+  name = "alias/aws/sns"
 }
