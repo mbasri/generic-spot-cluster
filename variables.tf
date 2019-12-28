@@ -11,7 +11,7 @@ variable "schedule_scale_up_and_down" {
 
 variable "tags" {
   type        = map
-  description = "Default tags to be applied on 'Xiaomi Mi Home Security Camera 360 Backup' infrastructure"
+  description = "Default tags to be applied on 'Generic Spot cluster' infrastructure"
   default     = {
     "Billing:Organisation"     = "Kibadex"
     "Billing:OrganisationUnit" = "Kibadex Labs"

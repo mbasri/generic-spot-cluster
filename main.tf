@@ -1,10 +1,19 @@
 resource "aws_ecs_cluster" "main" {
-  name    = join("-", [local.prefix_name, "pri"])
+  name    = local.cluster_name
   setting {
     name = "containerInsights"
     value = "enabled"
   }
   tags    = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri"])))
+}
+
+resource "aws_cloudwatch_log_group" "main" {
+  name    = "/aws/ecs/${local.cluster_name}"
+  tags    = merge(
+      var.tags,
+      map("Name", join("-", [local.prefix_name, "pri", "log"])),
+      map("Technical:ECSClusterName",local.cluster_name)
+    )
 }
 
 resource "aws_lb" "main" {
@@ -27,7 +36,7 @@ resource "aws_lb" "main" {
   tags    = merge(
       var.tags,
       map("Name", join("-", [local.prefix_name, "pri"])),
-      map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
+      map("Technical:ECSClusterName",local.cluster_name)
     )
 
 }
@@ -158,6 +167,12 @@ resource "aws_autoscaling_group" "main" {
   tag {
     key                 = "Name"
     value               = join("-", [local.prefix_name, "pri", "ec2", "0"])
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Technical:ECSClusterName"
+    value               = local.cluster_name
     propagate_at_launch = true
   }
 

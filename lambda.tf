@@ -43,5 +43,10 @@ resource "aws_lambda_function" "lifecycle_hook" {
     }
   }
 
-  tags = merge(var.tags, map("Name", join("-", [local.prefix_name, "all", "hok", "lam"])))
+  tags    = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "all", "hok", "lam"])),
+    map("Technical:ECSClusterName",local.cluster_name)
+  )
+  
 }

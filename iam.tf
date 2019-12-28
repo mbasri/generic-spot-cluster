@@ -3,7 +3,11 @@ resource "aws_iam_role" "main" {
   name               = join("-", [local.prefix_name, "pri", "iam", "rol"])
   description        = "[Terraform] IAM roles for EC2"
   assume_role_policy = file("files/iam/ec2-role.json")
-  tags               = merge (var.tags, map ("Name", join("-", [local.prefix_name, "pri", "rol"])))
+  tags    = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri", "rol"])),
+    map("Technical:ECSClusterName",local.cluster_name)
+  )
 }
 
 resource "aws_iam_instance_profile" "main" {
@@ -59,7 +63,11 @@ resource "aws_iam_role" "tagger_execution_role" {
   name               = join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])
   description        = "[Terraform] IAM roles for lambda used for generate an instance count"
   assume_role_policy = file("files/iam/lambda-role.json")
-  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])))
+  tags    = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri", "rol", "tag", "lam"])),
+    map("Technical:ECSClusterName",local.cluster_name)
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "xray" {
@@ -90,7 +98,11 @@ resource "aws_iam_role" "lifecycle_hook" {
   name               = join("-", [local.prefix_name, "pri", "rol", "hok"])
   description        = "[Terraform] IAM roles for ASG Lifecycle hook"
   assume_role_policy = file("files/iam/asg-role.json")
-  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "hok"])))
+  tags    = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri", "rol", "hok"])),
+    map("Technical:ECSClusterName",local.cluster_name)
+  )
 }
 
 resource "aws_iam_role_policy" "sns" {
@@ -104,7 +116,11 @@ resource "aws_iam_role" "lifecycle_hook_lambda" {
   name               = join("-", [local.prefix_name, "pri", "rol", "hok", "lam"])
   description        = "[Terraform] IAM roles for lambda used for draining the EC2"
   assume_role_policy = file("files/iam/lifecycle-hook-lambda-role.json")
-  tags               = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri", "rol", "hok", "lam"])))
+  tags    = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri", "rol", "hok", "lam"])),
+    map("Technical:ECSClusterName",local.cluster_name)
+  )
 }
 
 resource "aws_iam_role_policy" "lifecycle_hook_lambda" {
