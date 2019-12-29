@@ -48,8 +48,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   evaluation_periods  = "2"
   metric_name         = "CPUReservation"
   namespace           = "AWS/ECS"
-  period              = "120"
-  statistic           = "Maximum"
+  period              = "60"
+  statistic           = "Average"
   threshold           = "75"
 
   dimensions = {
@@ -73,8 +73,8 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
   evaluation_periods  = "2"
   metric_name         = "MemoryReservation"
   namespace           = "AWS/ECS"
-  period              = "120"
-  statistic           = "Maximum"
+  period              = "60"
+  statistic           = "Average"
   threshold           = "75"
 
   dimensions = {
@@ -96,11 +96,11 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   alarm_name          = join("-", [local.prefix_name, "cpu", "low"])
   alarm_description   = "[Terraform] Scale down if the cpu reservation is below 10% for 10 minutes"
   comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods  = "2"
+  evaluation_periods  = "15"
   metric_name         = "CPUReservation"
   namespace           = "AWS/ECS"
-  period              = "300"
-  statistic           = "Maximum"
+  period              = "60"
+  statistic           = "Average"
   threshold           = "25"
 
   dimensions = {
@@ -120,11 +120,11 @@ resource "aws_cloudwatch_metric_alarm" "memory_low" {
   alarm_name          = join("-", [local.prefix_name, "mem", "low"])
   alarm_description   = "[Terraform] Scale down if the memory reservation is below 10% for 10 minutes"
   comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods  = "2"
+  evaluation_periods  = "15"
   metric_name         = "MemoryReservation"
   namespace           = "AWS/ECS"
-  period              = "300"
-  statistic           = "Maximum"
+  period              = "60"
+  statistic           = "Average"
   threshold           = "25"
 
   dimensions = {
