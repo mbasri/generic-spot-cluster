@@ -20,10 +20,10 @@ data "terraform_remote_state" "bastion" {
 data "aws_caller_identity" "current" {}
 
 data "aws_ami" "main" {
-  most_recent  = true
-  owners = ["amazon"]
+  most_recent = true
+  owners      = ["amazon"]
 
-    filter {
+  filter {
     name   = "name"
     values = ["amzn2-ami-ecs-hvm-*"]
   }
@@ -55,9 +55,9 @@ data "template_file" "init_ecs" {
 data "template_file" "tagger" {
   template = file("${path.module}/files/user-data/03-tagger.sh.tpl")
   vars = {
-    region                    = data.terraform_remote_state.main.outputs.region
-    hostname                  = join("-", [local.prefix_name, "pri", "spt"])
-    tagger_lambda_name        = join("-", [local.prefix_name, "all", "tag", "lam"])
+    region             = data.terraform_remote_state.main.outputs.region
+    hostname           = join("-", [local.prefix_name, "pri", "spt"])
+    tagger_lambda_name = join("-", [local.prefix_name, "all", "tag", "lam"])
 
     billing_organisation      = var.tags["Billing:Organisation"]
     billing_organisation_unit = var.tags["Billing:OrganisationUnit"]
@@ -69,7 +69,7 @@ data "template_file" "tagger" {
     #technical_comment         = var.tags["Technical:Comment"]
     #security_compliance       = var.tags["Security:Compliance"]
     #security_data_sensitivity = var.tags["Security:DataSensitity"]
-    security_encryption       = var.tags["Security:Encryption"]
+    security_encryption = var.tags["Security:Encryption"]
   }
 }
 
@@ -107,14 +107,13 @@ data "archive_file" "lifecycle_hook" {
   output_path = "${path.module}/files/lambda/lifecycle-hook.zip"
 }
 
-
 # IAM Policies
 data "aws_iam_policy" "cloud_watch_agent" {
-  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"  
+  arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
 data "aws_iam_policy" "ssm" {
-  arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"  
+  arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
 }
 
 data "aws_iam_policy" "ssm_automation" {
@@ -151,9 +150,9 @@ data "template_file" "asg_policy" {
 
 data "template_file" "lambda_policy" {
   template = file("files/iam/lambda-policy.json.tpl")
-  vars     = {
-            tagger_lambda_arn = aws_lambda_function.tagger.arn
-          }
+  vars = {
+    tagger_lambda_arn = aws_lambda_function.tagger.arn
+  }
 }
 
 data "template_file" "sns_policy" {
@@ -162,6 +161,14 @@ data "template_file" "sns_policy" {
 
 data "template_file" "lifecycle_hook_lambda" {
   template = file("files/iam/lifecycle-hook-lambda-policy.json.tpl")
+}
+
+# Resource groups
+data "template_file" "resource_groups" {
+  template = file("${path.module}/files/ssm/resource-groups.json.tpl")
+  vars = {
+    ecs_cluster_name = aws_ecs_cluster.main.name
+  }
 }
 
 # KMS keys

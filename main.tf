@@ -1,19 +1,19 @@
 resource "aws_ecs_cluster" "main" {
-  name    = local.cluster_name
+  name = local.cluster_name
   setting {
-    name = "containerInsights"
+    name  = "containerInsights"
     value = "enabled"
   }
-  tags    = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri"])))
+  tags = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri"])))
 }
 
 resource "aws_cloudwatch_log_group" "main" {
-  name    = "/aws/ecs/${local.cluster_name}"
-  tags    = merge(
-      var.tags,
-      map("Name", join("-", [local.prefix_name, "pri", "log"])),
-      map("Technical:ECSClusterName",local.cluster_name)
-    )
+  name = "/aws/ecs/${local.cluster_name}"
+  tags = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri", "log"])),
+    map("Technical:ECSClusterName", local.cluster_name)
+  )
 }
 
 resource "aws_lb" "main" {
@@ -21,23 +21,23 @@ resource "aws_lb" "main" {
   load_balancer_type = "application"
   internal           = false
   subnets            = data.terraform_remote_state.main.outputs.public_subnet_id.*
-  security_groups    = [
+  security_groups = [
     data.terraform_remote_state.main.outputs.sg_public_web_lb,
     data.terraform_remote_state.main.outputs.sg_access_to_private_web_app
-    ]
-  idle_timeout       = 20
+  ]
+  idle_timeout = 20
 
   access_logs {
-    bucket = data.terraform_remote_state.main.outputs.bucket_name_lb_accesslog_bucket
-    prefix = join("-", [local.prefix_name, "pri"])
+    bucket  = data.terraform_remote_state.main.outputs.bucket_name_lb_accesslog_bucket
+    prefix  = join("-", [local.prefix_name, "pri"])
     enabled = true
   }
 
-  tags    = merge(
-      var.tags,
-      map("Name", join("-", [local.prefix_name, "pri"])),
-      map("Technical:ECSClusterName",local.cluster_name)
-    )
+  tags = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "pri"])),
+    map("Technical:ECSClusterName", local.cluster_name)
+  )
 
 }
 
@@ -47,11 +47,11 @@ resource "aws_lb_listener" "main_80" {
   protocol          = "HTTP"
 
   default_action {
-    type           = "fixed-response"
-    fixed_response  {
+    type = "fixed-response"
+    fixed_response {
       content_type = "text/plain"
       //message_body =
-      status_code  =  "200"
+      status_code = "200"
     }
     //target_group_arn = aws_lb_target_group.main.arn
   }
@@ -76,7 +76,7 @@ resource "aws_lb_listener" "main_443" {
 */
 
 resource "tls_private_key" "main" {
-  algorithm   = "RSA"
+  algorithm = "RSA"
 }
 
 resource "aws_key_pair" "main" {
@@ -96,26 +96,25 @@ resource "aws_secretsmanager_secret_version" "main" {
   secret_string = jsonencode(merge(map("keypair", tls_private_key.main.private_key_pem)))
 }
 
-
 resource "aws_launch_template" "main" {
-  name                   = join("-", [local.prefix_name, "pri", "spt"])
-  description            = "[Terraform] Launch template for '${var.tags["Billing:Application"]}' Application"
-  iam_instance_profile   {
+  name        = join("-", [local.prefix_name, "pri", "spt"])
+  description = "[Terraform] Launch template for '${var.tags["Billing:Application"]}' Application"
+  iam_instance_profile {
     name = aws_iam_instance_profile.main.name
   }
-  image_id               = data.aws_ami.main.image_id
-  key_name               = aws_key_pair.main.key_name
-  vpc_security_group_ids = [ 
+  image_id = data.aws_ami.main.image_id
+  key_name = aws_key_pair.main.key_name
+  vpc_security_group_ids = [
     data.terraform_remote_state.bastion.outputs.ssh_sg_id,
     data.terraform_remote_state.main.outputs.sg_access_to_internet
   ]
-  instance_type            = "t2.small"
-  user_data                = data.template_cloudinit_config.main.rendered
+  instance_type = "t2.small"
+  user_data     = data.template_cloudinit_config.main.rendered
 
   monitoring {
     enabled = true
   }
-  
+
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
@@ -130,35 +129,35 @@ resource "aws_launch_template" "main" {
 }
 
 resource "aws_autoscaling_group" "main" {
-  name                        = join("-", [local.prefix_name, "pri", "asg"])
-  availability_zones          = data.terraform_remote_state.main.outputs.availability_zones
-  min_size                    = "1"// length(data.terraform_remote_state.main.outputs.availability_zones)
-  desired_capacity            = length(data.terraform_remote_state.main.outputs.availability_zones)
-  max_size                    = "5"// length(data.terraform_remote_state.main.outputs.availability_zones)
-  vpc_zone_identifier         = data.terraform_remote_state.main.outputs.private_subnet_id.*
+  name                = join("-", [local.prefix_name, "pri", "asg"])
+  availability_zones  = data.terraform_remote_state.main.outputs.availability_zones
+  min_size            = "1" // length(data.terraform_remote_state.main.outputs.availability_zones)
+  desired_capacity    = length(data.terraform_remote_state.main.outputs.availability_zones)
+  max_size            = "5" // length(data.terraform_remote_state.main.outputs.availability_zones)
+  vpc_zone_identifier = data.terraform_remote_state.main.outputs.private_subnet_id.*
   //target_group_arns           = [ aws_lb_target_group.main.arn ]
-  enabled_metrics             = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
-  metrics_granularity         = "1Minute"
-  health_check_grace_period   = "120"
-  default_cooldown            = "300"
-  
+  enabled_metrics           = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
+  metrics_granularity       = "1Minute"
+  health_check_grace_period = "120"
+  default_cooldown          = "300"
+
   mixed_instances_policy {
     instances_distribution {
       on_demand_percentage_above_base_capacity = 0
-      spot_allocation_strategy = "capacity-optimized"
-      
+      spot_allocation_strategy                 = "capacity-optimized"
+
     }
 
     launch_template {
       launch_template_specification {
         launch_template_id = aws_launch_template.main.id
-        version = "$Latest"
+        version            = "$Latest"
       }
 
       dynamic "override" {
-        for_each  = ["t2.small", "t2.medium"]
+        for_each = ["t2.small", "t2.medium"]
         content {
-          instance_type  = override.value
+          instance_type = override.value
         }
       }
     }
@@ -177,7 +176,7 @@ resource "aws_autoscaling_group" "main" {
   }
 
   dynamic "tag" {
-    for_each  = var.tags
+    for_each = var.tags
 
     content {
       key                 = tag.key
@@ -188,9 +187,18 @@ resource "aws_autoscaling_group" "main" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes = [desired_capacity]
+    ignore_changes        = [desired_capacity]
   }
 }
+
+resource "aws_resourcegroups_group" "test" {
+  name = join("-", [local.prefix_name, "pri"])
+
+  resource_query {
+    query = data.template_file.resource_groups.rendered
+  }
+}
+
 
 resource "aws_autoscaling_schedule" "week_scale_up" {
   scheduled_action_name  = join("-", [local.prefix_name, "pri", "sch", "wku"])
