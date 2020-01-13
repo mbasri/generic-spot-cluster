@@ -191,14 +191,16 @@ resource "aws_autoscaling_group" "main" {
   }
 }
 
-resource "aws_resourcegroups_group" "test" {
-  name = join("-", [local.prefix_name, "pri"])
+resource "aws_resourcegroups_group" "main" {
+  name        = join("-", [local.prefix_name, "pri"])
+  description = local.cluster_name
 
   resource_query {
     query = data.template_file.resource_groups.rendered
   }
-}
 
+  tags = merge(var.tags, map("Name", join("-", [local.prefix_name, "pri"])))
+}
 
 resource "aws_autoscaling_schedule" "week_scale_up" {
   scheduled_action_name  = join("-", [local.prefix_name, "pri", "sch", "wku"])

@@ -23,7 +23,7 @@ variable "tags" {
     #"Technical:Comment"        = "Managed by Terraform"
     #"Security:Compliance"      = "HIPAA"
     #"Security:DataSensitity"   = "1"
-    "Security:Encryption"      = "True"
+    "Security:Encryption" = "True"
   }
 }
 

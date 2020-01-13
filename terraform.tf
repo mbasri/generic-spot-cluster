@@ -1,6 +1,6 @@
 provider "aws" {
   region  = data.terraform_remote_state.main.outputs.region
-  version = "~> 2.33.0"
+  version = "~> 2.44.0"
 }
 
 terraform {
