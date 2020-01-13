@@ -2,11 +2,11 @@ resource "aws_sns_topic" "main" {
   name              = join("-", [local.prefix_name, "sns"])
   display_name      = "[Terraform] Notification called from Lifecycle Hooks"
   kms_master_key_id = data.aws_kms_alias.sns.target_key_arn
-  tags    = merge(
+  tags = merge(
     var.tags,
     map("Name", join("-", [local.prefix_name, "sns"])),
-    map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
-      )
+    map("Technical:ECSClusterName", aws_ecs_cluster.main.name)
+  )
 }
 
 resource "aws_sns_topic_subscription" "main" {
@@ -56,13 +56,13 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
     ClusterName = aws_ecs_cluster.main.name
   }
 
-  alarm_actions     = [aws_autoscaling_policy.scale_up.arn]
-  
-  tags    = merge(
-      var.tags,
-      map("Name", join("-", [local.prefix_name, "cpu", "hgt"])),
-      map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
-        )
+  alarm_actions = [aws_autoscaling_policy.scale_up.arn]
+
+  tags = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "cpu", "hgt"])),
+    map("Technical:ECSClusterName", aws_ecs_cluster.main.name)
+  )
 
 }
 
@@ -81,16 +81,15 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
     ClusterName = aws_ecs_cluster.main.name
   }
 
-  alarm_actions     = [aws_autoscaling_policy.scale_up.arn]
-  
-  tags    = merge(
-      var.tags,
-      map("Name", join("-", [local.prefix_name, "mem", "hgt"])),
-      map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
-    )
+  alarm_actions = [aws_autoscaling_policy.scale_up.arn]
+
+  tags = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "mem", "hgt"])),
+    map("Technical:ECSClusterName", aws_ecs_cluster.main.name)
+  )
 
 }
-
 
 resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   alarm_name          = join("-", [local.prefix_name, "cpu", "low"])
@@ -106,14 +105,14 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   dimensions = {
     ClusterName = "${aws_ecs_cluster.main.name}"
   }
-  
-  alarm_actions     = [aws_autoscaling_policy.scale_down.arn]
 
-    tags    = merge(
-      var.tags,
-      map("Name", join("-", [local.prefix_name, "cpu", "low"])),
-      map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
-    )
+  alarm_actions = [aws_autoscaling_policy.scale_down.arn]
+
+  tags = merge(
+    var.tags,
+    map("Name", join("-", [local.prefix_name, "cpu", "low"])),
+    map("Technical:ECSClusterName", aws_ecs_cluster.main.name)
+  )
 }
 
 resource "aws_cloudwatch_metric_alarm" "memory_low" {
@@ -131,11 +130,11 @@ resource "aws_cloudwatch_metric_alarm" "memory_low" {
     ClusterName = aws_ecs_cluster.main.name
   }
 
-  alarm_actions     = [aws_autoscaling_policy.scale_down.arn]
+  alarm_actions = [aws_autoscaling_policy.scale_down.arn]
 
-  tags    = merge(
+  tags = merge(
     var.tags,
     map("Name", join("-", [local.prefix_name, "mem", "low"])),
-    map("Technical:ECSClusterName",aws_ecs_cluster.main.name)
+    map("Technical:ECSClusterName", aws_ecs_cluster.main.name)
   )
 }

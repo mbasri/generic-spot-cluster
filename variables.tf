@@ -12,7 +12,7 @@ variable "schedule_scale_up_and_down" {
 variable "tags" {
   type        = map
   description = "Default tags to be applied on 'Generic Spot cluster' infrastructure"
-  default     = {
+  default = {
     "Billing:Organisation"     = "Kibadex"
     "Billing:OrganisationUnit" = "Kibadex Labs"
     "Billing:Application"      = "Generic Spot cluster"
@@ -30,7 +30,7 @@ variable "tags" {
 variable "name" {
   type        = map
   description = "Default tags name to be applied on the infrastructure for the resources names"
-  default     = {
+  default = {
     Application      = "gsc"
     Environment      = "prd"
     Organisation     = "kbd"
